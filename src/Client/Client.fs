@@ -208,11 +208,11 @@ open Elmish.HMR
 #endif
 
 Program.mkProgram init update view
-#if DEBUG
 |> Program.withBridgeConfig
   (Bridge.endpoint Remote.socketPath
   |> Bridge.withMapping RC
   |> Bridge.withWhenDown ConnectionLost)
+#if DEBUG
 |> Program.withConsoleTrace
 |> Program.withDebugger
 #endif
