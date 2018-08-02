@@ -4,3 +4,4 @@ group Client
     Fable.Elmish.React
     Fable.Elmish.HMR
     Fulma
+    dotnet-fable
