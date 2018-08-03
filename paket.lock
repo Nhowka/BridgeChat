@@ -844,7 +844,7 @@ NUGET
       Microsoft.NETCore.App (>= 2.0) - restriction: >= netcoreapp2.0
     Dotnet.ProjInfo (0.9) - restriction: >= netcoreapp2.0
       FSharp.Core (>= 4.2.3) - restriction: && (< net45) (>= netstandard2.0)
-    Elmish.Bridge.Client (1.1)
+    Elmish.Bridge.Client (1.1.1)
       Fable.Elmish (>= 1.0.3) - restriction: >= netstandard2.0
     Fable.Compiler (1.3.17) - restriction: >= netcoreapp2.0
       Fable.Core (>= 1.3.17) - restriction: >= netstandard1.6
@@ -1150,11 +1150,11 @@ NUGET
   remote: https://api.nuget.org/v3/index.json
     Elmish (1.0.3) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.2.3) - restriction: || (>= net461) (>= netstandard1.6)
-    Elmish.Bridge.Giraffe (1.1)
-      Elmish.Bridge.Server (>= 1.1) - restriction: >= netstandard2.0
+    Elmish.Bridge.Giraffe (1.1.1)
+      Elmish.Bridge.Server (>= 1.1.1) - restriction: >= netstandard2.0
       Giraffe (>= 1.1) - restriction: >= netstandard2.0
       Microsoft.AspNetCore.WebSockets (>= 2.1) - restriction: >= netstandard2.0
-    Elmish.Bridge.Server (1.1) - restriction: >= netstandard2.0
+    Elmish.Bridge.Server (1.1.1) - restriction: >= netstandard2.0
       Elmish (>= 1.0.3) - restriction: >= netstandard2.0
       Fable.JsonConverter (>= 1.0.8) - restriction: >= netstandard2.0
     Fable.JsonConverter (1.0.8) - restriction: >= netstandard2.0

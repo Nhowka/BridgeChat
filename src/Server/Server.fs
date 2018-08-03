@@ -74,9 +74,12 @@ let update clientDispatch msg state =
         state, Cmd.none
   | Disconnected, _  | _, SetUser _ -> state, Cmd.none
   | (Connected u),SendMsg m ->
-      let msg = ClientMsg (u.Name,{Content=m;Time = DateTime.Now})
-      history.Put msg
-      connections.BroadcastClient(AddMsg msg)
+      if String.IsNullOrWhiteSpace m then
+          ()
+      else
+          let msg = ClientMsg (u.Name,{Content=m;Time = DateTime.Now})
+          history.Put msg
+          connections.BroadcastClient(AddMsg msg)
       state, Cmd.none
   | (Connected u),ChangeColor c ->
       connections.BroadcastClient(ColorChange(u.Name,c))
