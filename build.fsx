@@ -102,8 +102,17 @@ Target.create "Run" (fun _ ->
 )
 
 Target.create "Bundle" (fun _ ->
-    runDotNet (sprintf "publish \"%s\" -c release -o \"%s\"" serverPath deployDir) __SOURCE_DIRECTORY__
-    Shell.copyDir (Path.combine deployDir "public") (Path.combine clientPath "public") FileFilter.allFiles
+    let serverDir = Path.combine deployDir "Server"
+    let clientDir = Path.combine deployDir "Client"
+    let publicDir = Path.combine clientDir "public"
+
+    let publishArgs = sprintf "publish -c Release -o \"%s\"" serverDir
+    runDotNet publishArgs serverPath
+
+    Shell.copyDir publicDir "src/Client/public" FileFilter.allFiles
+
+    let procFile = sprintf "web: cd \"%s\" && dotnet Server.dll" serverDir
+    File.writeNew "Procfile" [procFile]
 )
 
 open Fake.Core.TargetOperators
