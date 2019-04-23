@@ -7,7 +7,7 @@ let publicPath = Path.GetFullPath "./public"
 type ServerMsg =
   | RS of RemoteServerMsg
   | Closed
-let port = System.Environment.GetEnvironmentVariable("PORT") |> uint16
+let port = System.Environment.GetEnvironmentVariable("PORT") |> (function null -> "8085" | e -> e) |> uint16
 
 type State =
   | Connected of User
@@ -15,7 +15,6 @@ type State =
 
 let connections =
   ServerHub<State,ServerMsg,RemoteClientMsg>()
-    .RegisterServer(RS)
 
 type History<'a> = {
   Get: unit -> 'a list
@@ -92,7 +91,6 @@ open Saturn.Application
 let server =
   Bridge.mkServer Remote.socketPath init update
   |> Bridge.withConsoleTrace
-  |> Bridge.register RS
   |> Bridge.whenDown Closed
   |> Bridge.withServerHub connections
   |> Bridge.run Giraffe.server

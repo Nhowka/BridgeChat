@@ -10,7 +10,6 @@ group Client
   source https://api.nuget.org/v3/index.json
 
   nuget Elmish.Bridge.Client
-  nuget Fable.Elmish.Debugger
   nuget Fable.Elmish.React
   nuget Fable.Elmish.HMR
   nuget Fulma
@@ -24,4 +23,3 @@ group Build
     nuget Fake.Core.Target
     nuget Fake.DotNet.Cli
     nuget Fake.IO.FileSystem
-

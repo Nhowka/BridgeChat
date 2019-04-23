@@ -4,6 +4,6 @@
     "url" : "heroku/nodejs"
   },
   {
-    "url" : "https://github.com/Nhowka/dotnetcore-buildpack#SAFE"
+    "url" : "https://github.com/Nhowka/dotnetcore-buildpack#SAFETEST"
   }]
 }
