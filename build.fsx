@@ -111,7 +111,7 @@ Target.create "Bundle" (fun _ ->
 
     Shell.copyDir publicDir "src/Client/public" FileFilter.allFiles
 
-    let procFile = sprintf "web: cd \"%s\" && dotnet Server.dll" serverDir
+    let procFile = "web: cd ./deploy/Server/ && dotnet Server.dll"
     File.writeNew "Procfile" [procFile]
 )
 
