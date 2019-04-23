@@ -106,12 +106,12 @@ Target.create "Bundle" (fun _ ->
     let clientDir = Path.combine deployDir "Client"
     let publicDir = Path.combine clientDir "public"
 
-    let publishArgs = sprintf "publish -c Release -o \"%s\"" serverDir
+    let publishArgs = sprintf "publish -c Release -o \"%s\" --runtime linux-x64" serverDir
     runDotNet publishArgs serverPath
 
     Shell.copyDir publicDir "src/Client/public" FileFilter.allFiles
 
-    let procFile = "web: cd ./deploy/Server/ && dotnet Server.dll"
+    let procFile = "web: cd ./deploy/Server/ && ./Server"
     File.writeNew "Procfile" [procFile]
 )
 
