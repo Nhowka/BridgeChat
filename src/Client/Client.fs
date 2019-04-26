@@ -11,38 +11,40 @@ open ClientModel
 
 let init () =
   {
+    Mode = User
     Connection = Disconnected
     ConnectedUsers = []
     Messages = []
-    TextField = ""
-    UserField = ""
-    ColorField = Black
   }, Cmd.none
 let update (msg : ClientMsg) (model : Model)  =
   match msg with
-  | SendUser ->
-    match model.UserField with
+  | ToggleMode ->
+    {model with Mode = if model.Mode = Message then User else Message}, Cmd.none
+  | SendUser(name, color)->
+    match name with
     |"" -> model, Cmd.none
     |_ ->
-      Bridge.Send(SetUser {Name = model.UserField; Color = model.ColorField})
+      Bridge.Send(SetUser {Name = name; Color = color})
       {model with Connection=Waiting}, Cmd.none
   | ConnectionLost -> {model with Connection = Disconnected}, Cmd.none
   | RC msg ->
     match msg with
     | GetUsers l -> {model with ConnectedUsers = l}, Cmd.none
+    | NameChange(ou, nu) ->
+      {model with
+        ConnectedUsers = model.ConnectedUsers |> List.map (fun ({Name=n} as u)-> if n = ou then {u with Name = nu} else u)
+        Messages = model.Messages |> List.map (function ClientMsg(c,m) when c = ou -> ClientMsg(nu,m)| m -> m)
+        }, Cmd.none
     | QueryConnected ->
         match model.Connection with
         |Connected u -> Bridge.Send(SetUser u)
         |Waiting | Disconnected -> ()
         Bridge.Send UsersConnected
         {model with ConnectedUsers = []}, Cmd.none
-    | NameStatus s ->
-        match model.Connection with
-        |Waiting ->
-          {model with Connection =  if s then Connected {Name = model.UserField; Color = model.ColorField} else Disconnected}
-        |_ -> model
-        , Cmd.none
-
+    | NameStatus (Some u) ->
+        {model with Connection = Connected u; Mode = Message}, Cmd.none
+    | NameStatus None ->
+        {model with Connection = Disconnected}, Cmd.none
     | AddUser u ->
       {model with ConnectedUsers = u::model.ConnectedUsers}, Cmd.none
     | RemoveUser u ->
@@ -54,22 +56,13 @@ let update (msg : ClientMsg) (model : Model)  =
       {model with Messages = m::model.Messages}, Cmd.none
     | ColorChange (u,c) ->
       let newConnUsers = model.ConnectedUsers |> List.map (fun ({Name=n} as o) ->if n=u then {o with Color=c} else o )
-      let newConn =
-        match model.Connection with
-        |Connected (({Name=us}) as user) when us = u -> Connected {user with Color = c}
-        |e -> e
-      {model with
-        ConnectedUsers = newConnUsers
-        Connection = newConn}
-      ,Cmd.none
+      {model with ConnectedUsers = newConnUsers}, Cmd.none
     | AddMsgs m -> {model with Messages = m}, Cmd.none
-  | SetTextField tx -> {model with TextField = tx}, Cmd.none
-  | SetUserField tx -> {model with UserField = tx}, Cmd.none
   | SetColor c ->
       match model.Connection with
-      |Connected {Color=o} when o<>c -> Bridge.Send(ChangeColor c)
+      |(Connected ({Color=o} as u)) when o<>c -> Bridge.Send(SetUser {u with Color = c})
       |_ -> ()
-      {model with ColorField = c},Cmd.none
+      model, Cmd.none
 
 #if DEBUG
 open Elmish.HMR

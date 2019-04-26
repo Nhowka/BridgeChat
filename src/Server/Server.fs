@@ -19,23 +19,27 @@ let connections =
 type History<'a> = {
   Get: unit -> 'a list
   Put: 'a -> unit
+  ChangeName: string -> string -> unit
   }
 let history =
   let mb =
     MailboxProcessor.Start
-     (fun (mb:MailboxProcessor<Choice<AsyncReplyChannel<Msgs list>,Msgs>>) ->
+     (fun (mb:MailboxProcessor<Choice<AsyncReplyChannel<Msgs list>,Msgs, string*string>>) ->
        let rec loop l =
         async {
           let! msg = mb.Receive()
           match msg with
-          |Choice1Of2 r ->
+          |Choice1Of3 r ->
             r.Reply l
             return! loop l
-          |Choice2Of2 m ->
-            return! loop (m::l |> List.truncate 50)}
+          |Choice2Of3 m ->
+            return! loop (m::l |> List.truncate 50)
+          |Choice3Of3 (o,n) ->
+            return! loop (l |> List.map (function ClientMsg(c,m) when c = o -> ClientMsg(n,m)| m -> m))}
        loop [])
-  {Get = fun () -> mb.PostAndReply (fun e -> Choice1Of2 e)
-   Put = fun m -> mb.Post(Choice2Of2 m)}
+  {Get = fun () -> mb.PostAndReply (fun e -> Choice1Of3 e)
+   Put = fun m -> mb.Post(Choice2Of3 m)
+   ChangeName = fun o n -> mb.Post(Choice3Of3 (o,n))}
 
 let update clientDispatch msg state =
  match msg with
@@ -49,6 +53,8 @@ let update clientDispatch msg state =
         connections.BroadcastClient(AddMsg msg)
       Disconnected, Cmd.none
  |RS msg ->
+  let nameInUse name =
+    connections.GetModels() |> Seq.exists (function Disconnected -> false | Connected {Name=n} -> n=name)
   match state, msg with
   | _, UsersConnected ->
       let users =
@@ -59,9 +65,9 @@ let update clientDispatch msg state =
       clientDispatch (AddMsgs (history.Get()))
       state, Cmd.none
   | Disconnected, SetUser u ->
-      if connections.GetModels() |> Seq.exists (function Disconnected -> false | Connected {Name=n} -> n=u.Name) then
+      if nameInUse u.Name then
         clientDispatch (AddMsg (SysMsg {Time=System.DateTime.Now; Content = "Name is in use"}))
-        clientDispatch (NameStatus false)
+        clientDispatch (NameStatus None)
         state, Cmd.none
       else
         let state = Connected u
@@ -69,8 +75,26 @@ let update clientDispatch msg state =
         let msg = SysMsg {Time=System.DateTime.Now; Content = u.Name+" joined the room"}
         history.Put msg
         connections.BroadcastClient(AddMsg msg)
-        clientDispatch(NameStatus true)
+        clientDispatch(NameStatus (Some u))
         state, Cmd.none
+  | Connected u,SetUser nu ->
+      if nu.Color <> u.Color then
+        connections.BroadcastClient(ColorChange(u.Name,nu.Color))
+      let fu =
+        if nu.Name = u.Name then
+          nu
+        elif nameInUse nu.Name then
+          clientDispatch (AddMsg (SysMsg {Time=System.DateTime.Now; Content = "Name is in use"}))
+          {nu with Name = u.Name}
+        else
+          connections.BroadcastClient(NameChange(u.Name,nu.Name))
+          let msg = SysMsg {Time=System.DateTime.Now; Content = sprintf "User %s is now called %s" u.Name nu.Name}
+          history.Put msg
+          history.ChangeName u.Name nu.Name
+          connections.BroadcastClient(AddMsg msg)
+          nu
+      clientDispatch(NameStatus (Some fu))
+      Connected fu, Cmd.none
   | Disconnected, _  | _, SetUser _ -> state, Cmd.none
   | (Connected u),SendMsg m ->
       if String.IsNullOrWhiteSpace m then
@@ -80,9 +104,7 @@ let update clientDispatch msg state =
           history.Put msg
           connections.BroadcastClient(AddMsg msg)
       state, Cmd.none
-  | (Connected u),ChangeColor c ->
-      connections.BroadcastClient(ColorChange(u.Name,c))
-      Connected {u with Color = c}, Cmd.none
+
 let init (clientDispatch:Dispatch<RemoteClientMsg>) () =
   clientDispatch QueryConnected
   Disconnected, Cmd.none

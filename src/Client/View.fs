@@ -19,13 +19,13 @@ let ColorToColor = function
   | Blue -> IsLink
   | Black -> IsDark
 let formatUser {Name=n;Color=c} = Message.message [Message.Size IsSmall;Message.Color (ColorToColor c)] [Message.body [][str n]]
-let colorSelector dispatch =
+let colorSelector (dispatch:(Color -> unit)) =
   [Red;Green;Blue;Black]
   |> List.map (fun c ->
     Column.column [Column.Width (Screen.All,Column.IsOneQuarter)]
       [Button.a [
         Button.Color (ColorToColor c)
-        Button.OnClick (fun _ -> dispatch(SetColor c))][str " "]])
+        Button.OnClick (fun _ -> dispatch c)][str " "]])
   |>
   Columns.columns [Columns.IsMobile;Columns.CustomClass "is-variable is-1";Columns.IsMultiline]
 let formatMessage users = function
@@ -56,6 +56,8 @@ let formatMessage users = function
 
 let view (p:{|model:Model; dispatch:ClientMsg->unit|}) =
   let props size : IHTMLProp list = [ Style [CSSProp.Height size;CSSProp.MaxHeight size;CSSProp.Overflow "auto"]]
+  let userField = Hooks.useState ""
+  let textField = Hooks.useState ""
   div [Style[CSSProp.Overflow "none"]]  [
     Container.container [Container.Props [Style [CSSProp.Height "100vh";CSSProp.MaxHeight "100vh";CSSProp.Overflow "none"]]] [
         Columns.columns [Columns.IsMobile] [
@@ -65,54 +67,51 @@ let view (p:{|model:Model; dispatch:ClientMsg->unit|}) =
             (p.model.ConnectedUsers |> List.map formatUser)
         ]
         Container.container [Container.Props [Style [CSSProp.Height "10vh";CSSProp.MaxHeight "20vh";CSSProp.Position PositionOptions.Absolute;CSSProp.Bottom "0"]]]
-          (match p.model.Connection with
-          | Connected _ ->
-             [
-              Media.media[][
-                 Media.left [] [(colorSelector p.dispatch)]
+          [
+            let (c, pl, txf, act) =
+              match p.model.Mode with
+              | Message ->
+                "Change user",
+                "Message",
+                textField,
+                fun () -> Bridge.Send(SendMsg textField.current)
+                          textField.update("")
+              | User ->
+                "Send message",
+                "User name",
+                userField,
+                fun () -> p.dispatch (SendUser (userField.current,match p.model.Connection with Connected u -> u.Color | _ -> Color.Black))
+            yield Media.media[][
+                 Media.left [] [(colorSelector (SetColor>>p.dispatch))]
                  Media.content[][
-                  Input.text [
-                    Input.Placeholder "Message"
-                    Input.Value p.model.TextField
-                    Input.OnChange (fun e -> p.dispatch (!!e.target?value |> SetTextField))
-                    Input.Props [
-                      OnKeyDown (fun (ev:KeyboardEvent) ->
-                                if ev.keyCode = 13. then
-                                  ev.preventDefault()
-                                  Bridge.Send(SendMsg p.model.TextField)
-                                  p.dispatch (SetTextField ""))
-
-                    ]]]
-
-                 Media.right[][
-                  Button.a [
-                    Button.OnClick (fun _ ->
-                      Bridge.Send(SendMsg p.model.TextField)
-                      p.dispatch (SetTextField ""))
-                    Button.Disabled (p.model.TextField = "") ][str "Send"]
-                 ]
-            ]]
-          | d ->
-            [
-                Media.media[][
-                 Media.left[][(colorSelector p.dispatch)]
-                 Media.content[][
+                   Field.div[Field.HasAddons][
+                     match p.model.Connection with
+                     | Connected _ ->
+                      yield Control.p [][
+                        Button.a[Button.OnClick (fun _ -> p.dispatch ToggleMode)][str c]
+                      ]
+                     |_ -> ()
+                     yield Control.p[Control.IsExpanded][
                      Input.text [
-                      Input.Placeholder "User name"
-                      Input.Disabled (d = Waiting)
-                      Input.Value p.model.UserField
-                      Input.OnChange (fun e -> p.dispatch (!!e.target?value |> SetUserField))
+                      Input.Placeholder pl
+                      Input.Value txf.current
+                      Input.Disabled (p.model.Connection = Waiting)
+                      Input.OnChange (fun e -> txf.update(unbox<string>(e.target?value)))
                       Input.Props [
                         OnKeyDown (fun (ev:KeyboardEvent) ->
-                                if ev.keyCode = 13. &&  d <> Waiting then
-                                  ev.preventDefault()
-                                  p.dispatch SendUser)
-
+                                  if ev.keyCode = 13. then
+                                    ev.preventDefault()
+                                    act())
                       ]]]
+                    ]
+                  ]
                  Media.right[][
-                  Button.a [Button.OnClick (fun _ -> p.dispatch SendUser);Button.IsLoading (d = Waiting) ][str "Send"]
+                   Button.a [
+                    Button.OnClick (fun _ -> act ())
+                    Button.IsLoading (p.model.Connection = Waiting)
+                    Button.Disabled (txf.current = "") ][str "Send"]
                  ]
-              ]
-            ])
+            ]
+          ]
       ]
   ]

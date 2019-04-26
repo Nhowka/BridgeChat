@@ -3,10 +3,9 @@ open Shared
 
 type ClientMsg =
     | RC of RemoteClientMsg
-    | SendUser
+    | SendUser of string * Color
     | ConnectionLost
-    | SetTextField of string
-    | SetUserField of string
+    | ToggleMode
     | SetColor of Color
 
 type Connection =
@@ -14,12 +13,13 @@ type Connection =
   | Waiting
   | Connected of User
 
+type FieldMode =
+  | User
+  | Message
 
 type Model = {
+    Mode : FieldMode
     Connection : Connection
     ConnectedUsers : User list
     Messages : Msgs list
-    TextField : string
-    UserField : string
-    ColorField : Color
 }

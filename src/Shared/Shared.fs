@@ -16,14 +16,15 @@ type Msgs =
 type RemoteClientMsg =
     | QueryConnected
     | GetUsers of User list
-    | NameStatus of bool
+    | NameStatus of User option
     | AddUser of User
     | RemoveUser of string
     | AddMsg of Msgs
     | AddMsgs of Msgs list
-    | ColorChange of (string*Color)
+    | ColorChange of string * Color
+    | NameChange of string * string
 
-type RemoteServerMsg = SetUser of User | ChangeColor of Color | SendMsg of string | UsersConnected
+type RemoteServerMsg = SetUser of User | SendMsg of string | UsersConnected
 
 
 module Remote =
