@@ -24,8 +24,7 @@ let update (msg : ClientMsg) (model : Model)  =
     match name with
     |"" -> model, Cmd.none
     |_ ->
-      Bridge.Send(SetUser {Name = name; Color = color})
-      {model with Connection=Waiting}, Cmd.none
+      {model with Connection=Waiting}, Cmd.bridgeSend(SetUser {Name = name; Color = color})
   | ConnectionLost -> {model with Connection = Disconnected}, Cmd.none
   | RC msg ->
     match msg with
@@ -39,8 +38,7 @@ let update (msg : ClientMsg) (model : Model)  =
         match model.Connection with
         |Connected u -> Bridge.Send(SetUser u)
         |Waiting | Disconnected -> ()
-        Bridge.Send UsersConnected
-        {model with ConnectedUsers = []}, Cmd.none
+        {model with ConnectedUsers = []}, Cmd.bridgeSend UsersConnected
     | NameStatus (Some u) ->
         {model with Connection = Connected u; Mode = Message}, Cmd.none
     | NameStatus None ->
@@ -59,10 +57,10 @@ let update (msg : ClientMsg) (model : Model)  =
       {model with ConnectedUsers = newConnUsers}, Cmd.none
     | AddMsgs m -> {model with Messages = m}, Cmd.none
   | SetColor c ->
+      model,
       match model.Connection with
-      |(Connected ({Color=o} as u)) when o<>c -> Bridge.Send(SetUser {u with Color = c})
-      |_ -> ()
-      model, Cmd.none
+      |(Connected ({Color=o} as u)) when o<>c -> Cmd.bridgeSend(SetUser {u with Color = c})
+      |_ -> Cmd.none
 
 #if DEBUG
 open Elmish.HMR
